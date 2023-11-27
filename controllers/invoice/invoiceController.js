@@ -240,7 +240,10 @@ exports.generateInvoicePDF = asyncHandler(async (req, res, next) => {
     });
 
     // Serialize the PDF document to a buffer
-    const pdfBytes = await pdfDoc.save();
+    // const pdfBytes = await pdfDoc.save();
+    const pdfBytesUint8Array = await pdfDoc.save();
+    const pdfBytes = Buffer.from(pdfBytesUint8Array);
+
 
     // Send the generated PDF buffer in the response
     res.end(pdfBytes);
