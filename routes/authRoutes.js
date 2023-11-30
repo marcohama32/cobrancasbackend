@@ -6,10 +6,19 @@ const {
   signin,
   logout,
   userProfile,
-  userServices,
   forgotPassword,
   resetPassword,
+
 } = require("../controllers/authController");
+
+const {
+  updateUser,
+  singleUser,
+  deleteUser,
+  allUsers,
+} = require("../controllers/userController");
+
+
 const {
   isAuthenticated,
   isAdmin,
@@ -19,13 +28,15 @@ const {
 //@auth routes
 // api/route
 router.post("/user/signup", signup);
-router.get("/user/getall", getAllUsers);
-router.post("/signin", signin);
+router.get("/user/getall", allUsers);
+router.get("/user/getuserbyid/:id", singleUser);
+router.put("/user/updateuser/:id", updateUser);
+router.delete("/user/delete/:id", deleteUser);
 
+router.post("/signin", signin);
 
 router.get("/logout", logout);
 router.get("/me", isAuthenticated, userProfile);
-router.get("/getmyservices",isAuthenticated,userServices)
 
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);

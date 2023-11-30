@@ -2,8 +2,73 @@ const User = require("../models/userModel");
 const ErrorResponse = require("../utils/errorResponse");
 const asyncHandler = require("../middleware/asyncHandler");
 
+
+//find all customers
+exports.allUsers = asyncHandler(async (req, res, next) => {
+  try {
+    const pageSize = Number(req.query.pageSize) || 10;
+    const page = Number(req.query.pageNumber) || 1;
+    const searchTerm = req.query.searchTerm;
+    // Parse the date range parameters from the request query
+    const startDateParam = req.query.startDate; // Format: YYYY-MM-DD
+    const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
+    // Create the query object
+    const query = {};
+
+    // Add search criteria if searchTerm is provided
+    if (searchTerm) {
+      // query["customer.firstName"] = { $regex: searchTerm, $options: "i" };
+      query.$or = [
+        { firstName: { $regex: searchTerm, $options: "i" } },
+        { lastName: { $regex: searchTerm, $options: "i" } },
+        { idNumber: { $regex: searchTerm, $options: "i" } },
+        { idType: { $regex: searchTerm, $options: "i" } },
+        { gender: { $regex: searchTerm, $options: "i" } },
+        { address: { $regex: searchTerm, $options: "i" } },
+        { contact1: { $regex: searchTerm, $options: "i" } },
+        { contact2: { $regex: searchTerm, $options: "i" } },
+        { username: { $regex: searchTerm, $options: "i" } },
+        { status: { $regex: searchTerm, $options: "i" } },
+      ];
+    }
+
+    // Add date range criteria if both startDate and endDate are provided
+    if (startDateParam && endDateParam) {
+      const startDate = new Date(startDateParam);
+      const endDate = new Date(endDateParam);
+
+      if (!isNaN(startDate) && !isNaN(endDate) && startDate <= endDate) {
+        // Only add date range criteria if startDate and endDate are valid dates
+        query.createdAt = {
+          $gte: startDate,
+          $lte: endDate,
+        };
+      }
+    }
+    // Calculate the total count of transactions matching the query
+    const totalCount = await User.countDocuments(query);
+    // Find customer requests with pagination
+    const user = await User.find(query)
+      .sort({ createdAt: -1 })
+      .skip(pageSize * (page - 1))
+      .limit(pageSize);
+
+    res.status(200).json({
+      success: true,
+      count: user.length,
+      total: totalCount,
+      pageSize,
+      page,
+      user,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+
 //load all users from db
-exports.allUsers = async (req, res, next) => {
+exports.allUsers1 = async (req, res, next) => {
   //enavle pagination
   const pageSize = 20;
   const page = Number(req.query.pageNumber) || 1;
@@ -11,7 +76,7 @@ exports.allUsers = async (req, res, next) => {
   // Parse the date range parameters from the request query
   const startDateParam = req.query.startDate; // Format: YYYY-MM-DD
   const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
-  
+
   if (searchTerm) {
     const regex = new RegExp(searchTerm, "i");
     query["$or"] = [
@@ -22,18 +87,17 @@ exports.allUsers = async (req, res, next) => {
     ];
   }
 
-    if (startDateParam && endDateParam) {
-      const startDate = new Date(startDateParam);
-      const endDate = new Date(endDateParam);
-      if (!isNaN(startDate) && !isNaN(endDate) && startDate <= endDate) {
-        // Only add date range criteria if startDate and endDate are valid dates
-        query.createdAt = {
-          $gte: startDate,
-          $lte: endDate,
-        };
-      }
+  if (startDateParam && endDateParam) {
+    const startDate = new Date(startDateParam);
+    const endDate = new Date(endDateParam);
+    if (!isNaN(startDate) && !isNaN(endDate) && startDate <= endDate) {
+      // Only add date range criteria if startDate and endDate are valid dates
+      query.createdAt = {
+        $gte: startDate,
+        $lte: endDate,
+      };
     }
-
+  }
 
   const count = await User.find({}).estimatedDocumentCount();
   try {
@@ -77,133 +141,18 @@ exports.allUsers = async (req, res, next) => {
   }
 };
 
-//load customers users from db
-exports.allCustomersUsers = async (req, res, next) => {
-  // Enable pagination
-  const pageSize = 10;
-  const page = Number(req.query.pageNumber) || 1;
-  // Enable search
-  const searchTerm = req.query.searchTerm;
-  // Parse the date range parameters from the request query
-  const startDateParam = req.query.startDate; // Format: YYYY-MM-DD
-  const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
-  const query = { userType: { $in: [4, 5, 7, 8] } };
-
-  if (searchTerm) {
-    const regex = new RegExp(searchTerm, "i");
-    query["$or"] = [
-      { firstName: regex },
-      { lastName: regex },
-      { email: regex },
-      // Add other fields you want to search by
-    ];
-  }
-
-  try {
-    if (startDateParam && endDateParam) {
-      const startDate = new Date(startDateParam);
-      const endDate = new Date(endDateParam);
-      if (!isNaN(startDate) && !isNaN(endDate) && startDate <= endDate) {
-        // Only add date range criteria if startDate and endDate are valid dates
-        query.createdAt = {
-          $gte: startDate,
-          $lte: endDate,
-        };
-      }
-    }
-
-    const count = await User.countDocuments(query);
-
-    const users = await User.find(query)
-      .sort({ createdAt: -1 })
-      .select("-password")
-      .populate({
-        path: "plan",
-        populate: {
-          path: "planService",
-          model: "PlanServices",
-        },
-      })
-      .populate({
-        path: "manager",
-        select: "firstName lastName email",
-        populate: {
-          path: "lineManager",
-          model: "User",
-          select: "firstName lastName email",
-        },
-      })
-      .populate({
-        path: "user",
-        select: "firstName lastName email",
-      })
-      .populate({
-        path: "company",
-        select: "companyName contact1 email",
-      })
-      .populate("myMembers")
-      .skip(pageSize * (page - 1))
-      .limit(pageSize);
-
-    res.status(200).json({
-      success: true,
-      users,
-      page,
-      pages: Math.ceil(count / pageSize),
-      count,
-    });
-  } catch (error) {
-    return next(error);
-  }
-};
-
 //show single user
 exports.singleUser = async (req, res, next) => {
   try {
     const userId = req.params.id;
 
-    const user = await User.findById(userId)
-      .populate({
-        path: "accountOwner",
-        populate: {
-          path: "manager",
-          select: "firstName lastName email",
-        },
-      })
-      .populate({
-        path: "plan",
-        populate: {
-          path: "planService",
-          model: "PlanServices",
-        },
-      })
-      .populate({
-        path: "manager",
-        select: "firstName lastName email",
-        populate: {
-          path: "lineManager",
-          model: "User",
-          select: "firstName lastName email",
-        },
-      })
-      .populate("user", "firstName lastName email")
-      .populate("myMembers");
+    const user = await User.findById(userId);
 
     // Check if the user exists
     if (!user) {
-      return res.status(404).json({ success: false, error: "User not found" });
-    }
-
-    // Construct the full URL for the avatar image
-    if (user.avatar) {
-      user.avatar = `${user.avatar}`; // Replace 'your-image-url' with the actual URL or path to your images
-    }
-
-    // Fetch and construct full URLs for the files
-    if (user.multipleFiles) {
-      const files = user.multipleFiles.split(",");
-      const fileURLs = files.map((file) => `${file}`);
-      user.multipleFiles = fileURLs;
+      return res
+        .status(404)
+        .json({ success: false, error: "Usuario nao encontrado" });
     }
 
     res.status(200).json({
@@ -272,83 +221,89 @@ exports.singleUserProfile = async (req, res, next) => {
     return next(error);
   }
 };
-//edit user
-exports.editUser = async (req, res, next) => {
-  try {
-    const user = await User.findById(req.params.id, req.body, { new: true });
-    res.status(200).json({
-      success: true,
-      user,
-    });
-  } catch (error) {
-    return next(error);
+//update user
+exports.updateUser = asyncHandler(async (req, res, next) => {
+  const id = req.params.id;
+
+  // Find the customer by ID
+  let checkCustomer = await User.findById(id);
+
+  if (!checkCustomer) {
+    return res.status(404).json({ message: "Usuario nao existe" });
   }
-};
+  const {
+    firstName,
+    lastName,
+    email,
+    gender,
+    dob,
+    idType,
+    idNumber,
+    address,
+    contact1,
+    role,
+    username,
+    password
+  } = req.body;
+
+  const requiredFields = [
+    firstName,
+    lastName,
+    email,
+    gender,
+    dob,
+    idType,
+    idNumber,
+    address,
+    contact1,
+    role,
+    username,
+  ];
+
+  if (requiredFields.some((field) => !field)) {
+    return next(new ErrorResponse("Campo nao pode ser nulo", 400));
+  }
+  // Check if contact is a valid number
+  if (isNaN(contact1)) {
+    return next(new ErrorResponse("Contacto deve ser um numero", 400));
+  }
+
+  const updatedUser = await User.findByIdAndUpdate(
+    id,
+    {
+      firstName,
+      lastName,
+      email,
+      gender,
+      dob,
+      idType,
+      idNumber,
+      address,
+      contact1,
+      role,
+      username,
+      password
+    },
+    { new: true }
+  );
+
+  res.status(200).json({
+    success: true,
+    user: updatedUser,
+  });
+});
 
 //delete user
 exports.deleteUser = async (req, res, next) => {
   try {
     const user = await User.findByIdAndDelete(req.params.id);
     if (!user) {
-      return next(new ErrorResponse("User not found", 404));
+      return next(new ErrorResponse("Usuario nao encontrado", 404));
     }
     res.status(200).json({
       success: true,
-      message: "User deleted",
+      message: "Usuario apagado",
     });
-  } catch (error) {
-    return next(error);
-  }
-};
-
-//jobs history
-exports.createUserJobsHistory = async (req, res, next) => {
-  const { title, description, salary, location } = req.body;
-  try {
-    const currentUser = await User.findOne({ _id: req.user._id });
-    if (!currentUser) {
-      return next(new ErrorResponse("You must log in", 401));
-    } else {
-      const addJobHistory = {
-        title,
-        description,
-        salary,
-        location,
-        user: req.user._id,
-      };
-      currentUser.jobsHistory.push(addJobHistory);
-      await currentUser.save();
-    }
-    res.status(200).json({
-      success: true,
-      currentUser,
-    });
-  } catch (error) {
-    return next(error);
-  }
-};
-
-//////////////////////// OTHER USERS /////////////////////////////////
-//load all users
-exports.allUsersManagers = async (req, res, next) => {
-  //enavle pagination
-  const pageSize = 10;
-  const page = Number(req.query.pageNumber) || 1;
-  const count = await User.find({}).estimatedDocumentCount();
-  try {
-    const users = await User.find()
-      .sort({ createdAt: -1 })
-      .select("-password")
-      .skip(pageSize * (page - 1))
-      .limit(pageSize);
-    res.status(200).json({
-      success: true,
-      users,
-      page,
-      pages: Math.ceil(count / pageSize),
-      count,
-    });
-    next();
   } catch (error) {
     return next(error);
   }

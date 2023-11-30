@@ -1,7 +1,6 @@
 const ErrorResponse = require("../utils/errorResponse");
 const jwt = require("jsonwebtoken");
 const User = require("../models/userModel");
-const Company = require("../models/companyModel");
 
 // Check if user is authenticated
 exports.isAuthenticated = async (req, res, next) => {
@@ -49,30 +48,6 @@ exports.isManager = (req, res, next) => {
     return next(new ErrorResponse("Access denied: You must be an admin", 401));
   }
   next();
-}
-
-// Middleware to check if the user is the company manager
-// Middleware to check if the user is the company manager or has role === 1
-exports.isCompanyManager = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const logedUser = req.user;
-
-    const company = await Company.findById(id);
-
-    if (!company) {
-      return next(new ErrorResponse("Company not found", 404));
-    }
-
-    if (logedUser.role === 1 || company.manager.toString() === logedUser.id || company.agent.toString() === logedUser.id) {
-      // Allow access for users with role === 1 or the company manager
-      next();
-    } else {
-      return next(new ErrorResponse("Access denied. Only company manager or users admin can access this account", 403));
-    }
-  } catch (error) {
-    next(error);
-  }
 };
 
 exports.isCustomerManager = async (req, res, next) => {
@@ -86,17 +61,26 @@ exports.isCustomerManager = async (req, res, next) => {
       return next(new ErrorResponse("User not found", 404));
     }
 
-    if (logedUser.role === 1 || logedUser.role === 6 || user.manager.toString() === logedUser.id || user.agent.toString() === logedUser.id) {
+    if (
+      logedUser.role === 1 ||
+      logedUser.role === 6 ||
+      user.manager.toString() === logedUser.id ||
+      user.agent.toString() === logedUser.id
+    ) {
       // Allow access for users with role === 1 or the company manager
       next();
     } else {
-      return next(new ErrorResponse("Access denied. Only customer manager or users admin can access this account", 403));
+      return next(
+        new ErrorResponse(
+          "Access denied. Only customer manager or users admin can access this account",
+          403
+        )
+      );
     }
   } catch (error) {
     next(error);
   }
 };
-
 
 exports.isPartner = (req, res, next) => {
   if (req.user.role !== 6 && req.user.role !== 1) {
@@ -104,7 +88,6 @@ exports.isPartner = (req, res, next) => {
   }
   next();
 };
-
 
 exports.isTokenValid = async (req, res, next) => {
   try {
@@ -127,11 +110,12 @@ exports.isTokenValid = async (req, res, next) => {
     }
 
     // Check if the token has expired
-    const resetPasswordExpiresMilliseconds = new Date(user.resetPasswordExpires).getTime();
+    const resetPasswordExpiresMilliseconds = new Date(
+      user.resetPasswordExpires
+    ).getTime();
     const currentTimeMilliseconds = Date.now() / 1000;
-    
-    if (resetPasswordExpiresMilliseconds < currentTimeMilliseconds) {
 
+    if (resetPasswordExpiresMilliseconds < currentTimeMilliseconds) {
       throw new Error("Reset token expired");
       // You can handle the token expiration here
     }
@@ -143,12 +127,14 @@ exports.isTokenValid = async (req, res, next) => {
 
     // If all checks pass, move on to the next middleware
     // next();
-    if(req.user){
+    if (req.user) {
       return res.status(200).json({ success: true, message: "token is valid" });
     }
   } catch (error) {
     // Handle errors in a centralized error handler or middleware
     // You can send a more descriptive error message if needed
-    return res.status(401).json({ success: false, message: "Authentication failed" });
+    return res
+      .status(401)
+      .json({ success: false, message: "Authentication failed" });
   }
 };

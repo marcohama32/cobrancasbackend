@@ -4,6 +4,8 @@ const ErrorResponse = require("../utils/errorResponse");
 const crypto = require("crypto");
 const bcrypt = require("bcrypt");
 const nodemailer = require("nodemailer");
+const asyncHandler = require("../middleware/asyncHandler");
+
 
 exports.signup = async (req, res, next) => {
   const {
@@ -75,6 +77,27 @@ exports.signup = async (req, res, next) => {
   }
 };
 
+//find customer by ID
+exports.findUserById = asyncHandler(async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    // Find the customer by ID
+    const user = await User.findById(id);
+
+    if (!user) {
+      return res.status(404).json({ message: "Usuario nao foi encontrado" });
+    }
+
+    res.status(200).json({
+      success: true,
+      user,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 exports.signin = async (req, res, next) => {
   try {
     const { username, password } = req.body;
@@ -133,148 +156,6 @@ exports.logout = (req, res, next) => {
     success: true,
     message: "logged out",
   });
-};
-
-//user profile
-exports.userProfile2 = async (req, res, next) => {
-  const user = await User.findById(req.user.id)
-    .sort({ createdAt: -1 })
-    .select("-password")
-    .populate({
-      path: "plan",
-      populate: {
-        path: "planService",
-        model: "PlanServices",
-      },
-    })
-    .populate({
-      path: "manager",
-      select: "firstName lastName email",
-      populate: {
-        path: "lineManager",
-        model: "User",
-        select: "firstName lastName email",
-      },
-    })
-    .populate({
-      path: "user",
-      select: "firstName lastName email",
-    })
-    .populate("myMembers")
-    .populate("myMembers")
-    .populate({
-      path: "accountOwner",
-      populate: {
-        path: "manager",
-        select: "firstName lastName email",
-      },
-    })
-    .populate("manager")
-    .populate({
-      path: "user",
-      select: "firstName lastName email",
-    });
-
-  res.status(200).json({
-    success: true,
-    user,
-  });
-};
-
-exports.userProfile3 = async (req, res, next) => {
-  const pageSize = 12; // Since it's for a single profile, pageSize doesn't matter
-  const page = Number(req.query.pageNumber) || 1;
-  const searchTerm = req.query.searchTerm;
-
-  // Validate pageSize and pageNumber
-  if (pageSize <= 0) {
-    return res.status(400).json({
-      success: false,
-      error: "Invalid pageSize. Must be greater than 0",
-    });
-  }
-
-  if (page <= 0) {
-    return res.status(400).json({
-      success: false,
-      error: "Invalid pageNumber. Must be greater than 0",
-    });
-  }
-  let query = {};
-  try {
-    if (searchTerm) {
-      query = {
-        $and: [
-          {
-            $or: [
-              { firstName: { $regex: searchTerm, $options: "i" } },
-              { lastName: { $regex: searchTerm, $options: "i" } },
-              { idNumber: { $regex: searchTerm, $options: "i" } },
-              { contact1: { $regex: searchTerm, $options: "i" } },
-              { contact2: { $regex: searchTerm, $options: "i" } },
-              { memberShipID: { $regex: searchTerm, $options: "i" } },
-              { relation: { $regex: searchTerm, $options: "i" } },
-            ],
-          },
-        ],
-      };
-
-      const dateSearch = new Date(searchTerm);
-      if (!isNaN(dateSearch)) {
-        query.$and.push({ enrolmentDate: dateSearch });
-      }
-    }
-    const count = await User.countDocuments(query);
-
-    const user = await User.findOne(query)
-      .sort({ createdAt: -1 })
-      .select("-password")
-      .populate({
-        path: "plan",
-        populate: {
-          path: "planService",
-          model: "PlanServices",
-        },
-      })
-      .populate({
-        path: "manager",
-        select: "firstName lastName email",
-        populate: {
-          path: "lineManager",
-          model: "User",
-          select: "firstName lastName email",
-        },
-      })
-      .populate({
-        path: "user",
-        select: "firstName lastName email",
-      })
-      .populate("myMembers")
-      .populate({
-        path: "accountOwner",
-        populate: {
-          path: "manager",
-          select: "firstName lastName email",
-        },
-      })
-      .populate("manager")
-      .populate({
-        path: "user",
-        select: "firstName lastName email",
-      })
-      .skip(pageSize * (page - 1))
-      .limit(pageSize);
-
-    res.status(200).json({
-      success: true,
-      user,
-      page,
-      pages: Math.ceil(count / pageSize),
-      count,
-    });
-  } catch (error) {
-    return next(error);
-  }
 };
 
 //user profile

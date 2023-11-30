@@ -51,15 +51,6 @@ app.use("/api", sseRoutes.router);
 
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
-const planRoutes = require("./routes/planRoutes");
-const serviceRoutes = require("./routes/serviceRoutes");
-const companyRoutes = require("./routes/companyRoutes");
-const partnerRoutes = require("./routes/partnerRoutes");
-const ctransationRoutes = require("./routes/customertransactionRoutes");
-const chatMessageRoutes = require("./routes/chatMessageRoutes");
-const FilesTemplateRoutes = require("./routes/filesTemplateRoutes");
-const CustomerRequestRoutes = require("./routes/customerrequestRoutes");
-const ussdRoutes = require("./routes/ussdRoutes");
 
 const Dashboard = require("./routes/dashboard/dashboardRoutes");
 const Servico = require("./routes/servicos/servicoRoutes");
@@ -69,15 +60,7 @@ const Charge = require("./routes/charges/chargesRoutes");
 
 app.use("/api", authRoutes);
 app.use("/api", userRoutes);
-app.use("/api", planRoutes);
-app.use("/api", serviceRoutes);
-app.use("/api", companyRoutes);
-app.use("/api", partnerRoutes);
-app.use("/api", ctransationRoutes);
-app.use("/api", chatMessageRoutes);
-app.use("/api", FilesTemplateRoutes);
-app.use("/api", CustomerRequestRoutes);
-app.use("/api", ussdRoutes);
+
 app.use("/api", Dashboard)
 app.use("/api", Customer)
 app.use("/api", Expense);
