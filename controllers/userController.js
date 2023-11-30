@@ -1,7 +1,9 @@
 const User = require("../models/userModel");
 const ErrorResponse = require("../utils/errorResponse");
 const asyncHandler = require("../middleware/asyncHandler");
-
+// Import required modules
+const crypto = require("crypto");
+const bcrypt = require("bcrypt");
 
 //find all customers
 exports.allUsers = asyncHandler(async (req, res, next) => {
@@ -243,7 +245,7 @@ exports.updateUser = asyncHandler(async (req, res, next) => {
     contact1,
     role,
     username,
-    password
+    password,
   } = req.body;
 
   const requiredFields = [
@@ -267,6 +269,8 @@ exports.updateUser = asyncHandler(async (req, res, next) => {
   if (isNaN(contact1)) {
     return next(new ErrorResponse("Contacto deve ser um numero", 400));
   }
+  // Hash the password
+  const hashedPassword = await bcrypt.hash(password, 10); // 10 is the number of salt rounds
 
   const updatedUser = await User.findByIdAndUpdate(
     id,
@@ -282,7 +286,7 @@ exports.updateUser = asyncHandler(async (req, res, next) => {
       contact1,
       role,
       username,
-      password
+      password: hashedPassword, // Save the hashed password
     },
     { new: true }
   );
