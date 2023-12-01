@@ -47,11 +47,23 @@ exports.getDashboardData = async (req, res) => {
       0
     );
 
-    // Calculate average amount charges for the current month
-    const averageAmountCharges = currentMonthCharges.reduce(
+    // Calculate the start date for six months ago
+    const sixMonthsAgo = moment().subtract(6, "months").startOf("month");
+
+    // Filter charges for the last six months
+    const lastSixMonthsCharges = allCharges.filter((charge) =>
+      moment(charge.createdAt).isSameOrAfter(sixMonthsAgo)
+    );
+
+    // Calculate the total amount of charges for the last six months
+    const totalAmountLastSixMonthsCharges = lastSixMonthsCharges.reduce(
       (total, charge) => total + parseFloat(charge.amount),
       0
     );
+
+    // Calculate the average amount of charges for the last six months
+    const averageAmountChargesLastSixMonths =
+      totalAmountLastSixMonthsCharges / lastSixMonthsCharges.length;
 
     // Recent charges (last 5)
     const recentCharges = await Charge.find()
@@ -131,7 +143,7 @@ exports.getDashboardData = async (req, res) => {
       totalAmountCharges,
       totalAmountChargesCurrentMonth,
       totalAmountChargesPreviousMonth,
-      forecastAmountCurrentMonth: averageAmountCharges,
+      forecastAmountCurrentMonth: averageAmountChargesLastSixMonths,
       totalAmountExpenses,
       totalCurrentMonthAmountExpenses,
       recentCharges,
@@ -163,6 +175,19 @@ exports.getDashboardData = async (req, res) => {
       .json({ error: "An error occurred while fetching dashboard data" });
   }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 exports.populateLineChart = async (req, res) => {
