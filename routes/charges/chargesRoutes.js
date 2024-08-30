@@ -23,8 +23,8 @@ const {
 
 //@auth routes
 // api/route
-router.post("/c2bPayment",isAuthenticated, c2bPayment);
-router.post("/charge/create", isAuthenticated, createCharge);
+router.post("/c2bPayment", c2bPayment);
+router.post("/charge/create", createCharge);
 router.put("/charge/edit/:id", isAuthenticated, editCharge);
 router.put("/charge/revoke/:id", isAuthenticated, revokeCharge);
 router.get("/charge/getbyid/:id", isAuthenticated, findChargeById);
